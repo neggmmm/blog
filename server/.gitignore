@@ -1,0 +1,22 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Build or distribution folders
+dist/
+build/
+out/
+
+# IDE or editor configurations
+.vscode/
+
+# Operating system files
+.DS_Store
+
+# NPM package lock file (optional, but sometimes ignored)
+package-lock.json

@@ -28,7 +28,14 @@ export const addComment = async (req, res) => {
         { new: true }
       );
   
-      res.status(201).json(newComment);
+      // Populate the user field for the response
+      const populatedComment = await Comment.findById(newComment._id).populate('user', 'username');
+      res.status(201).json({
+        _id: populatedComment._id,
+        text: populatedComment.text,
+        username: populatedComment.user?.username || populatedComment.username || 'Anonymous',
+        createdAt: populatedComment.createdAt,
+      });
   
     } catch (err) {
       console.error("Error adding comment:", err);
@@ -40,8 +47,13 @@ export const addComment = async (req, res) => {
 export const getComments = async (req, res) => {
   try {
     const { postId } = req.params;
-    const comments = await Comment.find({ post: postId });
-    res.status(200).json(comments);
+    const comments = await Comment.find({ post: postId }).populate('user', 'username');
+    res.status(200).json(comments.map(comment => ({
+      _id: comment._id,
+      text: comment.text,
+      username: comment.user?.username || comment.username || 'Anonymous',
+      createdAt: comment.createdAt,
+    })));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

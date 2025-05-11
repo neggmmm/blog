@@ -6,10 +6,24 @@ dotenv.config()
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.DB_URL);
-    console.log('MongoDB connected');
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/blog';
+    await mongoose.connect(mongoURI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB connection error:', err);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.log('MongoDB disconnected. Attempting to reconnect...');
+      setTimeout(connectDB, 5000);
+    });
+
+    console.log('MongoDB connected successfully');
   } catch (err) {
-    console.error(err.message);
+    console.error('MongoDB connection error:', err.message);
     process.exit(1);
   }
 };

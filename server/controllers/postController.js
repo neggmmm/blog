@@ -3,18 +3,34 @@ import Post from '../model/Post.js';
 import mongoose from 'mongoose';
 
 // GET /api/posts
-export const getPosts = async (req, res) => {
+export const getPosts = async (req, res, next) => {
   try {
-    const posts = await Post.find().populate('comments');
-    res.status(200).json(posts);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const posts = await Post.find()
+      .populate('comments')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Post.countDocuments();
+
+    res.status(200).json({
+      posts,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalPosts: total
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
 
 // POST /api/posts
-export const createPost = async (req, res) => {
-  try{
+export const createPost = async (req, res, next) => {
+  try {
     const { title, content, image } = req.body;
 
     const newPost = await Post.create({
@@ -26,47 +42,65 @@ export const createPost = async (req, res) => {
       },
       username: req.user.username,
     });
+
     res.status(201).json(newPost);
-  }catch(err){
-    res.status(500).json({message:err.message});
+  } catch (err) {
+    next(err);
   }
 };
 
-export const deletePost = async (req, res) => {
+export const deletePost = async (req, res, next) => {
   try {
     const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid post ID" });
+    }
+
     const post = await Post.findById(id);
     
-    if (!post) return res.status(404).json({ message: "Post not found" });
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
     
-    // تحقق إذا كان المستخدم هو المؤلف
     if (post.author.id.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not authorized to delete this post" });
     }
     
     await Post.findByIdAndDelete(id);
-    res.status(200).json({ message: "Post deleted" });
+    res.status(200).json({ message: "Post deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
 
-export const updatePost = async (req, res) => {
+export const updatePost = async (req, res, next) => {
   try {
     const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid post ID" });
+    }
+
     const post = await Post.findById(id);
     
-    if (!post) return res.status(404).json({ message: "Post not found" });
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
     
-    // تحقق من الملكية
     if (post.author.id.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not authorized to update this post" });
     }
     
-    const updatedPost = await Post.findByIdAndUpdate(id, req.body, { new: true });
+    const updatedPost = await Post.findByIdAndUpdate(
+      id, 
+      { ...req.body, updatedAt: Date.now() },
+      { new: true, runValidators: true }
+    );
+    
     res.status(200).json(updatedPost);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
 
@@ -226,13 +260,30 @@ export const getPostById = async (req, res) => {
     const post = await Post.findById(req.params.id)
       .populate({
         path: 'comments',
-        populate: { path: 'author', select: 'username' }
-      })
-      .populate('author', 'username');
+        select: 'text username createdAt',
+        options: { sort: { createdAt: 1 } }
+      });
     if (!post) {
       return res.status(404).json({ message: 'Post not found' });
     }
-    res.status(200).json(post);
+    // Return a structure matching frontend expectations
+    res.status(200).json({
+      _id: post._id,
+      title: post.title,
+      content: post.content,
+      author: post.username,
+      score: post.score,
+      upvotes: post.upvotes,
+      downvotes: post.downvotes,
+      comments: post.comments.map(comment => ({
+        _id: comment._id,
+        username: comment.username,
+        text: comment.text,
+        createdAt: comment.createdAt
+      })),
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

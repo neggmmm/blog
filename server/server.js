@@ -2,11 +2,10 @@
 import app from './app.js';
 import connectDB from './config/db.js';
 import dotenv from 'dotenv';
-// import cors from 'cors'
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
-
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
 connectDB();
 
 // app.use(cors({

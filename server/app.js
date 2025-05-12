@@ -3,6 +3,7 @@ import express from 'express';
 import postRoutes from './routes/postRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import commentRoutes from './routes/commentRoutes.js';
+import verificationRoutes from './routes/verificationRoutes.js';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -38,6 +39,7 @@ app.use('/api', apiLimiter);
 app.use('/api/posts', postRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', commentRoutes);
+app.use('/api/verification', verificationRoutes);
 
 // Error handling
 app.use(errorHandler);

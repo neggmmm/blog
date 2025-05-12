@@ -20,8 +20,6 @@ const authMiddleware = (req, res, next) => {
       id: decoded.id,
       username: decoded.username,
     };
-    
-    console.log("🔐 Token from header:", authHeader);
 
     next();
   } catch (err) {

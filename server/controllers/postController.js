@@ -11,6 +11,7 @@ export const getPosts = async (req, res, next) => {
 
     const posts = await Post.find()
       .populate('comments')
+      .populate({ path: 'author.id', select: 'username _id' })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -106,24 +107,10 @@ export const updatePost = async (req, res, next) => {
 
 export const upVotePost = async (req, res) => {
   try {
-    console.log('Upvoting post:', {
-      postId: req.params.id,
-      userId: req.user.id,
-      user: req.user
-    });
-
     const post = await Post.findById(req.params.id);
     if (!post) {
-      console.log('Post not found:', req.params.id);
       return res.status(404).json({ message: 'Post not found' });
     }
-
-    console.log('Found post:', {
-      postId: post._id,
-      currentScore: post.score,
-      currentUpvotes: post.upvotes,
-      currentDownvotes: post.downvotes
-    });
 
     // Ensure arrays exist
     if (!Array.isArray(post.upvotes)) post.upvotes = [];
@@ -136,12 +123,6 @@ export const upVotePost = async (req, res) => {
     // Check if user has already upvoted
     const hasUpvoted = post.upvotes.some(id => id.toString() === userIdStr);
     const hasDownvoted = post.downvotes.some(id => id.toString() === userIdStr);
-
-    console.log('Vote status:', {
-      hasUpvoted,
-      hasDownvoted,
-      userIdStr
-    });
 
     if (hasUpvoted) {
       // Remove upvote
@@ -159,46 +140,19 @@ export const upVotePost = async (req, res) => {
       }
     }
 
-    console.log('Updated post:', {
-      newScore: post.score,
-      newUpvotes: post.upvotes,
-      newDownvotes: post.downvotes
-    });
-
     const updatedPost = await post.save();
-    console.log('Saved post:', updatedPost);
     res.json(updatedPost);
   } catch (error) {
-    console.error('Error in upVotePost:', {
-      error: error.message,
-      stack: error.stack,
-      postId: req.params.id,
-      userId: req.user?.id
-    });
     res.status(500).json({ message: 'Error updating vote', error: error.message });
   }
 };
 
 export const downVotePost = async (req, res) => {
   try {
-    console.log('Downvoting post:', {
-      postId: req.params.id,
-      userId: req.user.id,
-      user: req.user
-    });
-
     const post = await Post.findById(req.params.id);
     if (!post) {
-      console.log('Post not found:', req.params.id);
       return res.status(404).json({ message: 'Post not found' });
     }
-
-    console.log('Found post:', {
-      postId: post._id,
-      currentScore: post.score,
-      currentUpvotes: post.upvotes,
-      currentDownvotes: post.downvotes
-    });
 
     // Ensure arrays exist
     if (!Array.isArray(post.upvotes)) post.upvotes = [];
@@ -211,12 +165,6 @@ export const downVotePost = async (req, res) => {
     // Check if user has already downvoted
     const hasUpvoted = post.upvotes.some(id => id.toString() === userIdStr);
     const hasDownvoted = post.downvotes.some(id => id.toString() === userIdStr);
-
-    console.log('Vote status:', {
-      hasUpvoted,
-      hasDownvoted,
-      userIdStr
-    });
 
     if (hasDownvoted) {
       // Remove downvote
@@ -234,22 +182,9 @@ export const downVotePost = async (req, res) => {
       }
     }
 
-    console.log('Updated post:', {
-      newScore: post.score,
-      newUpvotes: post.upvotes,
-      newDownvotes: post.downvotes
-    });
-
     const updatedPost = await post.save();
-    console.log('Saved post:', updatedPost);
     res.json(updatedPost);
   } catch (error) {
-    console.error('Error in downVotePost:', {
-      error: error.message,
-      stack: error.stack,
-      postId: req.params.id,
-      userId: req.user?.id
-    });
     res.status(500).json({ message: 'Error updating vote', error: error.message });
   }
 };
@@ -262,7 +197,8 @@ export const getPostById = async (req, res) => {
         path: 'comments',
         select: 'text username createdAt',
         options: { sort: { createdAt: 1 } }
-      });
+      })
+      .populate({ path: 'author.id', select: 'username _id' });
     if (!post) {
       return res.status(404).json({ message: 'Post not found' });
     }
@@ -271,7 +207,10 @@ export const getPostById = async (req, res) => {
       _id: post._id,
       title: post.title,
       content: post.content,
-      author: post.username,
+      username: post.username, 
+      author: {
+        id: post.author.id, // This is now a populated user object
+      },
       score: post.score,
       upvotes: post.upvotes,
       downvotes: post.downvotes,

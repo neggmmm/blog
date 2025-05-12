@@ -42,7 +42,6 @@ export const createUser = async(req,res) => {
             token 
         });
     } catch(err) {
-        console.error('Registration error:', err);
         res.status(500).json({ message: err.message || "Server error" });
     }
 }
@@ -98,7 +97,6 @@ export const requestPasswordReset = async (req, res) => {
             message: "If your email is registered, you will receive password reset instructions." 
         });
     } catch (err) {
-        console.error('Password reset request error:', err);
         res.status(500).json({ message: "An error occurred. Please try again later." });
     }
 };
@@ -127,15 +125,12 @@ export const resetPassword = async (req, res) => {
 
         res.status(200).json({ message: "Password reset successful" });
     } catch (err) {
-        console.error('Password reset error:', err);
         res.status(500).json({ message: err.message || "Server error" });
     }
 };
 
 export const loginUser = async (req, res) => {
     try {
-      console.log("Request body:", req.body); // Debugging
-  
       const { emailOrUsername, password } = req.body;
   
       // Validate input
@@ -166,7 +161,6 @@ export const loginUser = async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
-      console.log(`token: ${token}`)
       res.status(200).json({ message: "Logged in successfully!", token });
     } catch (err) {
       res.status(500).json({ error: err.message || "Server error" });
@@ -193,7 +187,6 @@ export const getCurrentUser = async (req, res) => {
     }
     res.json(user);
   } catch (error) {
-    console.error('Error getting current user:', error);
     res.status(500).json({ message: 'Error getting user data' });
   }
 };

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import '../pages/styles.css';
 import { useAuth } from '../contexts/AuthContext';
+import { editComment, deleteComment } from '../api/postService';
 
 function PostDetail() {
   const { id } = useParams();
@@ -12,6 +13,8 @@ function PostDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentText, setEditCommentText] = useState('');
 
   useEffect(() => {
     fetchPost();
@@ -23,7 +26,6 @@ function PostDetail() {
       setIsLoading(true);
       setError('');
       const response = await api.get(`/posts/${id}`);
-      console.log('Post detail response:', response);
       if (!response.data || !response.data.title) {
         setError('Post not found or invalid response from server.');
         setPost(null);
@@ -78,6 +80,39 @@ function PostDetail() {
     }
   };
 
+  const handleStartEditComment = (comment) => {
+    setEditingCommentId(comment._id);
+    setEditCommentText(comment.text);
+  };
+
+  const handleEditComment = async (commentId) => {
+    try {
+      await editComment(commentId, { text: editCommentText });
+      setPost(prev => ({
+        ...prev,
+        comments: prev.comments.map(c =>
+          c._id === commentId ? { ...c, text: editCommentText } : c
+        )
+      }));
+      setEditingCommentId(null);
+    } catch (err) {
+      setError('Failed to edit comment');
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Delete this comment?')) return;
+    try {
+      await deleteComment(commentId);
+      setPost(prev => ({
+        ...prev,
+        comments: prev.comments.filter(c => c._id !== commentId)
+      }));
+    } catch (err) {
+      setError('Failed to delete comment');
+    }
+  };
+
   // Helper to format numbers (e.g., 6100 -> 6.1K)
   const formatCount = (num) => {
     if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
@@ -94,7 +129,7 @@ function PostDetail() {
         <div className="post-header" style={{ marginBottom: '1.2rem' }}>
           <h3 style={{ fontWeight: 700, fontSize: '1.3rem', color: '#fff', margin: 0 }}>{post.title}</h3>
           <span className="post-author" style={{ color: '#b0b0b0', fontSize: '0.95rem', marginTop: '0.2rem', display: 'block' }}>
-            Posted by {post.author}
+          {post.username}
           </span>
         </div>
         <div className="post-content" style={{ color: '#fff', margin: '1rem 0', fontSize: '1.08rem', lineHeight: 1.7 }}>
@@ -123,10 +158,50 @@ function PostDetail() {
                 <span className="comment-author" style={{ fontWeight: 600, color: '#ffb000', fontSize: '1rem' }}>
                   {comment.username}
                 </span>
+                {user && user.username === comment.username && (
+                  <span>
+                    <button
+                      onClick={() => handleStartEditComment(comment)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#4caf50',
+                        fontSize: '1.1rem',
+                        cursor: 'pointer',
+                        marginLeft: '0.5rem'
+                      }}
+                      title="Edit Comment"
+                    >✏️</button>
+                    <button
+                      onClick={() => handleDeleteComment(comment._id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#f44336',
+                        fontSize: '1.1rem',
+                        cursor: 'pointer',
+                        marginLeft: '0.2rem'
+                      }}
+                      title="Delete Comment"
+                    >🗑️</button>
+                  </span>
+                )}
               </div>
-              <div className="comment-content" style={{ color: '#fff', fontSize: '1.05rem', lineHeight: 1.6, marginTop: 2 }}>
-                {comment.text}
-              </div>
+              {editingCommentId === comment._id ? (
+                <div>
+                  <textarea
+                    value={editCommentText}
+                    onChange={e => setEditCommentText(e.target.value)}
+                    className="form-input comment-input"
+                  />
+                  <button onClick={() => handleEditComment(comment._id)}>Save</button>
+                  <button onClick={() => setEditingCommentId(null)}>Cancel</button>
+                </div>
+              ) : (
+                <div className="comment-content" style={{ color: '#fff', fontSize: '1.05rem', lineHeight: 1.6, marginTop: 2 }}>
+                  {comment.text}
+                </div>
+              )}
             </div>
           ))}
           <form onSubmit={handleAddComment} className="comment-form">
